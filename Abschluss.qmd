@@ -35,7 +35,7 @@ Das Paket **readxl** ist hilfreich, um Exceltabellen in R einzulesen. Mit dem Pa
 ```{r}
 # load data
 
-setwd("C:/Users/thilo/OneDrive/Dokumente/kritische einblicke")
+setwd("C:/~")
 
 Naturschutz <- read_excel("Naturschutz.xlsx") 
 View(Naturschutz)
