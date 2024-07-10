@@ -1,0 +1,132 @@
+---
+title: "Naturschutzgebiete"
+author: Aranka Bálint
+format: html
+editor: visual
+---
+
+## Abschlussprojekt Kritische Einblicke in Datenwelten: Naturschutz und Flächenproduktivität
+
+Für unser Abschlussprojekt untersuchten wir, ob es einen Zusammenhang zwischen der Produktivität der Flächen, die für Siedlung und Verkehr in Anspruch genommen werden, und dem Flächenanteil an Naturschutzgebieten in Deutschland gibt.
+
+Die Daten für die Produktivität der Flächen bezogen wir vom Statistikportal von Bund und Ländern Deutschland. Wir nutzen die Daten von 2022. Die Daten über die Naturschutzgebiete sind von 2020. Der Vergleich von Daten aus unterschiedlichen Jahren kann potentiell problematisch sein. Wir entschieden uns allerdings, trotzdem die Daten von 2022 zu nutzen. Dies taten wir aus verschiedenen Gründen: Zum einen sind Naturschutzgebiete sehr konstant. Die Fläche weist normalerweise keine starke Fluktuation über kurze Zeit auf. Deswegen ist das Anwenden von Daten aus älteren Jahren hier weniger problematisch. Es waren Daten über die Flächenproduktivität für 2020 verfügbar, allerdings fehlten in diesem Datensatz die Angaben für Bayern und Thüringen. Das fehlen zweier Bundesländer wäre ein größeres Problem als eine leicht verschobene Jahreszahl. Zudem ist 2020 auch ein Jahr, in dem durch die Covid-19-Pandemie wirtschaftliche Daten verzerrt sein können und damit weniger repräsentativ sind. 2022 wurde auch durch die Pandemie beeinflusst, aber der Einfluss dürfte dort geringer sein.
+
+Bevor wir uns die Daten ansehen, installieren wir die für die Auswertung benötigten Packete.
+
+## Paktete laden und Dataset verstehen
+
+```{r}
+
+# Packete für die Analyse
+
+#install.packages("readxl") 
+#install.packages("ggplot2")
+#install.packages("dplyr") 
+#install.packages("tidyverse")
+
+library(readxl)
+library(ggplot2) 
+library(dplyr) 
+library(tidyverse)
+```
+
+Das Paket **readxl** ist hilfreich, um Exceltabellen in R einzulesen. Mit dem Paket **dplyr** und der Bibliothek **tidyverse** erhalten wir Zugang zu verschiedenen Methoden der Datenmanipulation. **ggplot2** wird uns nachher bei der Visualisierung der Daten behilflich sein. Jetzt lasst uns einen ersten Blick in unsere oben beschriebenen Rohdaten werfen.
+
+```{r}
+# load data
+
+setwd("C:/Users/thilo/OneDrive/Dokumente/kritische einblicke")
+
+Naturschutz <- read_excel("Naturschutz.xlsx") 
+View(Naturschutz)
+
+```
+
+Unser Dataset hat 8 Variablen (darunter die Bundesländer **BL**) und 18 Beobachtungen, was ein wenig komisch ist, da Deutschland nur 16 Bundesländer hat. Bevor wir uns nun also die restlichen 7 Variablen anschauen, sollten wir unser Dataset so verkürzen, dass wir nur die Bundesländer in unserem Dataset haben. Dazu müssen wir die AWZ und die Gesamtzusammenfassung Deutschland aus den Daten entfernen. AWZ ist die Abkürzung für Ausschließliche Wirtschaftszone und bezeichnet Teile der Ostsee, die nicht mehr zum Küstenmeer gehören und für Fischfang etc. genutzt werden. Die AWZ ist in unserem Datensatz das größte Naturschutzgebiet (NSG). Wir haben uns allerdings trotzdem dazu entschieden, dieses Gebiet auszuschließen, weil keine Daten zu der Flächenproduktivität vorliegt (Was ja klar ist, da dort keine Menschen leben). Alledings könnte der Ausschluss des größten NSG unser Bild ein wenig verzerren.
+
+```{r}
+# Ausschluss AWZ und Deutschland. Den neuen Dataframe nennen wir Naturschutz für die Bundesländer
+
+Naturschutz_bl <- Naturschutz %>% 
+  filter(BL != "AWZ", BL != "Deutschland" )
+glimpse(Naturschutz_bl)
+
+```
+
+Wenn wir uns nun die restlichen Variablen ansehen, sehen wir **BL** und **short**, was Character für die Bundesländer beinhaltet. Die **fläche_brutto_ha** ist die komplette Fläche des Bundeslandes in Hektar. **Fläche_nsg_ha** ist die komplette Fläche der Naturschutzgebiete in Hektar, wobei **anzahl_nsg** die Anzahl der Naturschutzgebiete in dem Bundesland ist. Der **anteil_nsg_an_fläche** stellt den Anteil der Fläche der Naturschutzgebiete an der kompletten Fläche des Bundeslandes dar und ist damit auch die Variable die wir erklären wollen. All diese Variablen sind in double gespeichert, haben also einen numerischen, auswertbaren Wert. Unsere erklärende Variable von Interesse ist die **flächenproduktivität_mill_km2**.
+
+Die Variable der **flächenproduktivität_mill_km2** zeigt das BIP pro km² von Flächen, die für Siedlung und Verkehr in Anspruch genommen werden. Die Variable ist damit ein Indikator für den wirtschaftlichen Wert der Flächen. Die Nutzung von Flächen für Siedlung und Verkehr steht im Konflikt mit dem Naturschutz, da durch den Schutz einer Fläche deren wirtschaftliche Nutzung aufgegeben wird. Dies könnte bedeuten, dass in Bundesländern mit hoher Flächenproduktivität weniger Naturschutz betrieben wird. Um diese Hypothese zu überprüfen, vergleichen wir die durchschnittliche Flächenproduktivität mit dem Flächenanteil von Naturschutzgebieten an der Gesamtfläche der Bundesländer. Beachte, dass diese Variable als character vorliegt, also R diese Variable nicht als Zahl versteht. Darum müssen wir uns noch kümmern. Deshalb verändern wir den Variablentypen wie folgt:
+
+```{r}
+# Wir geben in den neuen Dataframe auf die Produktivitätsvariable und setzen diese im gleichen df als Zahl
+
+Naturschutz_bl$flächeproduktivität_mill_km2 <- as.numeric(Naturschutz_bl$flächeproduktivität_mill_km2)
+```
+
+## Zusammenhänge grafisch darstellen
+
+Zur Erinnerung: Wir wollen untersuchen, ob in Bundesländern mit **hoher Flächenproduktivität weniger Naturschutz betrieben** wird. Dazu wollen wir den Zusammenhang zwischen der Flächenproduktivität (erklärende Variable) und dem Anteil des Naturschutzgebietes an der Gesamtfläche (zu erklärende Variable) darstellen. Wir haben auch die Vermutung, dass **Unterschiede zwischen alten und neuen Bundesländern** bestehen, da die neuen Bundesländer lange Zeit eine andere Wirtschaftsform aufwiesen. Deshalb nehmen wir die von uns erstellt Dummyvariable für Ost-Länder der ehemaligen DDR mit in den Plot auf. Ost steht in dem Datensatz noch als numerische Variable geschrieben, das ergibt uns einen Fehler, wenn wir diese Variable grafisch darstellen wollen. Wir formen den Variablentyp also wieder um.
+
+```{r}
+Naturschutz_bl$Ost <- as.character(Naturschutz_bl$Ost) 
+```
+
+Jetzt können wir endlich unseren ersten Plot erstellen, der unsere beiden Variablen und die Einteilung nach Bundesländer der ehemaligen DDR berücksichtigt.
+
+```{r}
+ggplot(Naturschutz_bl, aes(x= flächeproduktivität_mill_km2 , y=anteil_nsg_an_fläche, color = BL, shape = Ost)) + 
+  geom_point(size = 3, na.rm = TRUE) +
+  labs(
+    x = "Flächenproduktivität",
+    y = "Anteil NSG an Gesamtfläche", 
+    color = "Bundesländer", 
+    shape = "Neue Bundesländer", 
+    title = "Zusammenhang Landnutzung und Anteil NSG", 
+  ) +
+  theme_minimal()
+```
+
+In diesem Plot sehen wir, dass Länder der ehemaligen DDR eine geringen Flächenproduktivität und (bis auf Brandenburg) auch einen geringen Anteil an NSG an der Gesamtfläche haben. Weiter sehen wir auch, dass die Stadtstaaten Berlin, Hamburg und Bremen interessanterweise Ausreißer sind. Sonst ist es eher schwer, einen linearen Zusammenhang auszumachen. Aber auch das können wir nochmal überprüfen.
+
+## Lineare Zusammenhänge
+
+Wir nutzten eine lineare Regression, um zu analysieren, ob es einen Zusammenhang zwischen Flächenproduktivität und Flächenanteil von Naturschutzgebieten in den verschiedenen Bundesländern gibt. Zuerst berechnen wir übersichtshalber die Regression über alle Bundesländer, auch wenn wir gesehen haben, dass die Stadtstaaten Ausreißer sind. Dazu setzen wir Ost wieder als numerische Variable und kontrollieren mit **glimpse()** nochmal, ob auch alle metrischen Variablen als double gespeichert sind.
+
+```{r}
+Naturschutz_bl$Ost <- as.numeric(Naturschutz_bl$Ost) 
+glimpse(Naturschutz_bl)
+```
+
+Nun können wir unsere multivariate Regression durchführen...
+
+```{r}
+lm1 <- lm(anteil_nsg_an_fläche ~  fläche_brutto_ha + fläche_nsg_ha + anzahl_nsg + flächeproduktivität_mill_km2  + Ost, data = Naturschutz_bl)
+summary(lm1)
+```
+
+... und sehen leider, dass bis auf die Bruttofläche der Bundesländer und des NSG keine unserer Variablen signifikant sind. Auch wenn wir die Ausreißer Stadtstaaten nocheinmal herausrechnen, ändern sich unsere Ergebnisse nicht.
+
+## Zusatz: Lineare Regression ohne Stadtstaaten
+
+Für unsere Regression, die Bremen, Hamburg und Berlin nicht beachtet, schreiben wir wieder einen neuen Dataframe. Hier filtern wir unseren df nach allen Bundesländern, die nicht die Stadtstaaten sind und schauen uns unseren neuen Dataframe an.
+
+```{r}
+Naturschutz_ohne_Stadt <- Naturschutz %>% 
+  filter(BL != "Hamburg", BL != "Bremen", BL != "Berlin", BL != "AWZ", BL != "Deutschland") 
+glimpse(Naturschutz_ohne_Stadt)
+```
+
+Wir sehen, dass unsere unabhängige Variable als character vorliegt, was eine Regression nicht möglich macht. Es folgt die bekannte Typumwandlung.
+
+```{r}
+Naturschutz_ohne_Stadt$flächeproduktivität_mill_km2  <- as.numeric(Naturschutz_ohne_Stadt$flächeproduktivität_mill_km2 ) 
+```
+
+Hier führen wir nochmal eine lineare Regression ohne die Stadtstaaten durch.
+
+```{r}
+lm2 <- lm(anteil_nsg_an_fläche ~  fläche_brutto_ha + fläche_nsg_ha + anzahl_nsg + flächeproduktivität_mill_km2  + Ost, data = Naturschutz_ohne_Stadt)
+summary(lm2)
+```
+
+Signifikant sind nur die Fläche des BL und die Fläche des NSG, was allerdings klar ist, da das die beiden Komponenten unserer unabhängigen Variable ist. Je größer das Bundesland wird, desto geringer ist der Anteil der Naturschutzgebiete in dem Land. Nach Auswertung unserer Daten konnten wir keinen statistisch signifikanten Zusammenhang für unsere Hypothese feststellen. Dies könnte bedeuten, dass die Produktivität des Landes nicht ausschlaggebend für den Anteil der Naturschutzgebiet ist und somit der Naturschutz nicht unbedingt in Konflikt mit der Produktivität der Fläche steht.
