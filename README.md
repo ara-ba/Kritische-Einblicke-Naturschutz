@@ -1,0 +1,3 @@
+Im Rahmen des Seminars Kritische Einblicke in Datenwelten haben wir ein R Projekt erstellt, dass den Einfluss von der Produktivität der Landnutzung auf den Anteil der Naturschutzgebiete der deutschen Bundesländer untersucht. 
+Dazu arbeiten wir mit Daten vom Statistikportal zur Landproduktivität: https://www.statistikportal.de/de/ugrdl/ergebnisse/flaeche-und-raum/ffsv#12509  und vom Bundesamt für Naturschutz: https://www.bfn.de/daten-und-fakten/naturschutzgebiete-deutschland.
+Beide Daten wurden in dem Dataframe Naturschutz.csv gespeichert und der Code sowie weitere Erläuterungen lassen sich in dem Notebook Abschluss.qmd nachlesen.
